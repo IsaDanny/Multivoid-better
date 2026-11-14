@@ -4,7 +4,7 @@
 
 The tools that leave a persistent actor behind (the grappling hook and rope, the nail gun, the wall
 builder), timed explosives, the fishing rod and the physgun, each reverse-engineered with a design.
-The hook and the rope are built; the rest are not. A prop a hook drags is the props page's
+The hook, the rope and the built walls are built; the rest are not. A prop a hook drags is the props page's
 driven-prop channel ([props.md](props.md)).
 
 ## How it works
@@ -63,6 +63,18 @@ a mirror and a save-loaded copy, and the host takes its hook while the client ho
 `nocollision` with no pose of the aim fan putting the client's look on its copy, the reported symptom, and
 `clientruns` in the press's own tick, with nothing asked of the host while the copy and an item are already there.
 
+### Built walls
+
+The wall builder's frame (`customWall_unfinished_C`), the wall a full frame becomes (`customWall_C`), and the
+wet-concrete and radioactive walls are save actors whose whole state is their own getData record, so the record is
+the payload, as it is for an anchored hook. The host holds every one: each birth of one on the host (its player's
+build, a frame filling up, concrete drying) goes to every client as its record and save key, and each death as its key.
+A client's copy runs none of the verbs that change a wall -- the frame's brick overlap, `buildWall`, the concrete's
+drying tick, `Damage` -- so it changes only when the host says so. A brick a client throws into a frame is a synced
+prop, and the host's own frame takes it. The one act a client authors is the build: the frame its `addWall` placed is
+committed to the host, which checks the class and the sender's reach, mints the key, builds the frame and answers with
+the spawn that retires the client's own frame `[?]` (`coop/items/placed_build`).
+
 ## Who owns what
 
 | State | Owner | Shape |
@@ -71,6 +83,7 @@ a mirror and a save-loaded copy, and the host takes its hook while the client ho
 | a deployed hook once both ends are anchored | the host | the thrower hands over the hook's own save record; it is a save actor from then on |
 | a hook's tie, the physics constraint | the host | a client breaks every tie a hook builds on it; the host builds a client's tie on its mirror of that hook |
 | an anchored hook taken back with the use key | the host | a client's pickup is asked of the host by the hook's save key; the taker's copy runs the game's pickup once the host has taken its hook away |
+| a built wall or wall frame | the host | a client's build is a commit; every change after it is the host's |
 
 ## Wire messages
 
@@ -81,19 +94,25 @@ a mirror and a save-loaded copy, and the host takes its hook while the client ho
 | `HookAnchorCommit` | a client to the host | the anchored hook's own save record, chunked |
 | `HookAnchored` | the host to all | an anchored hook exists, as the same record |
 | `HookRetrieve` | a client to the host (op 0); the host to all (op 1) | an anchored hook's save key: a client's pickup of it; or that it is gone, and whose pickup it was |
+| `PlacedBuildCommit` | a client to the host | the frame the client's wall builder placed, as its record, chunked |
+| `PlacedBuildSpawn` | the host to all | a wall exists, as its record, chunked; names the commit it answers |
+| `PlacedBuildDestroy` | the host to all | a wall is gone, by its save key |
 
 ## Late join
 
 A hook its thrower still owns reaches a joiner on its keepalive. An anchored hook is a save actor
 of the host's and arrives with the save, and the game's own load re-resolves both of its attach
-keys in the joiner's world, and its pickup goes through the host like any other copy's. The deployables that are not
+keys in the joiner's world, and its pickup goes through the host like any other copy's. A built wall arrives with the
+save too, and every wall the host holds is replayed at the joiner's world-ready edge, skipped by a joiner whose game
+already resolves its key. The deployables that are not
 built reach a joiner only through the save.
 
 ## Known limits
 
 | Limit | Evidence |
 |---|---|
-| The deployables other than the hook and the rope (nail gun, wall builder, explosives, fishing rod, physgun) are not synced; a nail or a wall placed by one peer reaches the others only through the save at their next join | `[V]` no lane under `coop/props` catches them |
+| The deployables other than the hook, the rope and the built walls (nail gun, explosives, fishing rod, physgun) are not synced; a nail placed by one peer reaches the others only through the save at their next join | `[V]` no lane under `coop/props` catches them |
+| A client's damage to a wall is not applied: its copy refuses `Damage`, and the hit is not sent to the host. A wall's cracks and health reach a client only when the wall is rebuilt or replaced | `[RD]` `coop/items/placed_build` |
 | A hook whose save key the wire cannot carry (over 31 characters), or that has none, is not taken on a client: the press is refused there. The lane's hooks carry 23; the game's own keys and the level's hook were not measured | `[?]` `coop/items/hook_retrieve` |
 | A client's hook into the ATV ties the host's ATV against the client's puppet; whether the ATV lane's corrector carries that pull back to the client's copy is not measured | `[?]` `coop/items/hook_constraint` ties any keyed actor the bite resolves; `coop/interactables/atv_sync` corrects rather than parks |
 
@@ -106,3 +125,4 @@ built reach a joiner only through the save.
 | the tie, host-only | `coop/items/hook_constraint` |
 | the props a tie claims for the driven-prop channel | `coop/items/hook_prop_claim` |
 | an anchored hook taken back with the use key | `coop/items/hook_retrieve` |
+| the built walls: the host's table, a client's commit, the copies | `coop/items/placed_build`, `ue_wrap/actors/placed_build` |

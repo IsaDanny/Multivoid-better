@@ -52,6 +52,7 @@ host validates and commits contested writes), `local` (never shared).
 | Balance | the shared points total | host | replay at connect | built |
 | Email, daily task | host-appended emails, peer-symmetric delete; the host's task state | host | save transfer plus a prime | built |
 | Deployed hook and rope | existence, flight, the head pose and the reel while the thrower holds it; the handover to the host when both ends anchor, and the anchor itself; the tie, which exists on the host alone, so a prop any peer's hook drags streams to everyone and two hooks on one prop are two host constraints | peer while held, arbiter at the anchor, host after; the host for every constraint | keepalive while held; the save plus a ready-edge replay once anchored; a mirror re-bites from the state it is rebuilt from | built |
+| Built walls | the wall builder's frame, the wall it becomes, wet-concrete and radioactive walls: each birth and death on the host as its record and key; a client's build committed to the host | host; a client's build is a commit | the save plus a ready-edge replay, deduped by key | built |
 | Lamp posts | not synced: lockstep from the shared day and night cycle | local | none, by design | built |
 
 ## Devices and the workstation

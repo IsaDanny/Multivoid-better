@@ -23,6 +23,7 @@ set(VOTVCOOP_SOURCES
     src/coop/items/hook_sync.cpp
     src/coop/items/hook_anchor.cpp
     src/coop/items/hook_retrieve.cpp
+    src/coop/items/placed_build.cpp
     src/coop/items/hook_prop_claim.cpp
     src/coop/items/hook_constraint.cpp
     src/coop/items/broom_stroke.cpp

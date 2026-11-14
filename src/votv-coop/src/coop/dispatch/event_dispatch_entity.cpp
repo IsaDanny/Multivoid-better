@@ -17,6 +17,7 @@
 #include "coop/items/hook_anchor.h"
 #include "coop/items/hook_retrieve.h"
 #include "coop/items/hook_sync.h"  // the hook lane
+#include "coop/items/placed_build.h"  // the built walls
 #include "coop/element/bind_wait.h"  // Holds: a held convert is no failed spawn
 #include "coop/element/quiescence_drain.h"  // the pending position corrections
 #include "coop/props/save_identity_bind.h"  // UpdateChipHostPos
@@ -506,6 +507,31 @@ bool HandleEntityEvent(net::Session& session,
         ue_wrap::game_thread::Post([c, slot] {
             ::coop::hook_anchor::OnAnchoredChunk(c, slot);
         });
+        break;
+    }
+    case net::ReliableKind::PlacedBuildCommit:
+    case net::ReliableKind::PlacedBuildSpawn: {
+        // A built wall as its getData record, chunked: a client's commit to the host, or the host's
+        // statement that one exists. placed_build checks the sender against the direction.
+        if (msg.payloadLen < sizeof(net::BlobChunkPayload)) break;
+        net::BlobChunkPayload c{};
+        std::memcpy(&c, msg.payload, sizeof(c));
+        const uint8_t slot = (msg.senderPeerSlot >= 0 && msg.senderPeerSlot < net::kMaxPeers)
+                                 ? static_cast<uint8_t>(msg.senderPeerSlot)
+                                 : static_cast<uint8_t>(0xFF);
+        const bool commit = msg.kind == net::ReliableKind::PlacedBuildCommit;
+        ue_wrap::game_thread::Post([c, slot, commit] {
+            if (commit) ::coop::placed_build::OnCommitChunk(c, slot);
+            else        ::coop::placed_build::OnSpawnChunk(c, slot);
+        });
+        break;
+    }
+    case net::ReliableKind::PlacedBuildDestroy: {
+        if (msg.payloadLen != sizeof(net::PlacedBuildDestroyPayload)) break;
+        net::PlacedBuildDestroyPayload p{};
+        std::memcpy(&p, msg.payload, sizeof(p));
+        if (p.key.len == 0 || p.key.len > sizeof(p.key.data)) break;
+        ue_wrap::game_thread::Post([p] { ::coop::placed_build::OnDestroy(p); });
         break;
     }
     case net::ReliableKind::EntitySpawn: {

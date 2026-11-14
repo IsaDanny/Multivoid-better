@@ -31,7 +31,7 @@ inline constexpr uint32_t kMagic = 0x564D5450u;
 // This file is past the 1500-line hard cap and stays there: it is the single-feature exception the
 // rule names. One wire format, whose enum, payload structs and static_asserts are read together;
 // splitting it would put a kind's number in one file and its bytes in another.
-inline constexpr uint16_t kProtocolVersion = 291;
+inline constexpr uint16_t kProtocolVersion = 292;
 
 // Default LAN port (overridable via multivoid.ini "net.port=").
 inline constexpr uint16_t kDefaultPort = 47621;
@@ -1430,6 +1430,21 @@ enum class ReliableKind : uint16_t {
     // run reaches every peer as CargoLiftState. Never relayed; not pre-world; a press whose sender has no body on the
     // host yet waits in its queue. Late join: none, a press is an act. KeyedTogglePayload.
     CargoLiftIntent = 242,
+
+    // The walls a player builds (coop/items/placed_build). CLIENT->HOST: the wall frame this client's
+    // wall builder just placed, as the frame's own getData record behind u16 seq | u8 classId | u8 0.
+    // The host checks the class and the sender's reach, mints the save key, spawns the frame and
+    // answers with PlacedBuildSpawn, which retires the sender's own copy. Chunked blob; never
+    // relayed; not pre-world. Late join: none, a commit is an act.
+    PlacedBuildCommit = 262,
+    // HOST->ALL: a built wall exists, as its getData record behind u16 seq | u8 classId | u8 origin
+    // slot (seq 0: the host's own build or transition). A receiver whose game already resolves the
+    // key has it from the save and does nothing. Chunked blob. Late join: every standing wall is
+    // replayed at the joiner's world-ready edge, deduped by key.
+    PlacedBuildSpawn = 263,
+    // HOST->ALL: a built wall is gone, named by its save key (a frame that became a wall, a wall
+    // destroyed). PlacedBuildDestroyPayload. Late join: none, the save no longer holds it.
+    PlacedBuildDestroy = 264,
 };
 
 #pragma pack(push, 1)
@@ -2962,6 +2977,12 @@ struct HookDestroyPayload {
                           //      hook the host still owns.
 };
 static_assert(sizeof(HookDestroyPayload) == 4, "HookDestroyPayload must be 4 bytes");
+
+// PlacedBuildDestroy: the built wall the host no longer holds, by the save key every copy shares.
+struct PlacedBuildDestroyPayload {
+    WireKey key;  // 32
+};
+static_assert(sizeof(PlacedBuildDestroyPayload) == 32, "PlacedBuildDestroyPayload must be 32 bytes");
 
 // HookRetrieve. The hook is named by its save key, the one name every copy of an anchored hook
 // shares: the host's adopted hook, a client's anchored mirror and a joiner's copy from the save.

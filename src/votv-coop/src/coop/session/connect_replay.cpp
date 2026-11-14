@@ -76,6 +76,7 @@
 #include "coop/creatures/roach_sync.h"  // host-authoritative roach-infestation mirror
 #include "coop/items/hook_anchor.h"
 #include "coop/items/hook_retrieve.h"
+#include "coop/items/placed_build.h"
 #include "coop/world/event_active_sync.h"  // the native activeEvents registry probe
 #include "coop/world/creature_event_relay.h"  // the host's creature events, carried to every client's count
 #include "coop/world/spill_sync.h"
@@ -191,6 +192,7 @@ void ConnectReplayForSlot(int slot) {
     coop::floppy_slot_sync::QueueConnectBroadcastForSlot(slot);  // every device slot, the laptop's file quad behind the laptop's: the joiner's world came from a save frozen before the first insert
     coop::verb_lanes::ConnectReplayForSlot(slot);  // the verb lanes' seeds: every corded prop's cord link
     coop::hook_anchor::QueueConnectBroadcastForSlot(slot);  // anchored hooks the joiner's save capture missed; it dedups by key
+    coop::placed_build::QueueConnectBroadcastForSlot(slot);  // built walls the joiner's save capture missed; it dedups by key
     coop::roach_sync::QueueConnectBroadcastForSlot(slot);  // current roach population to the joiner
     // The piramid lane's late-join answer: re-send an in-flight gather commit to the slot, after
     // the world-actor and NPC snapshots above, since the replay's eid lookups need the joiner's
